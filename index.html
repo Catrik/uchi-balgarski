@@ -1,0 +1,799 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Uchi Balgarski</title>
+<meta name="description" content="Learn Bulgarian with flashcards, quizzes and progress tracking — entirely in Latin script, no Cyrillic needed.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Uchi Balgarski">
+<meta name="theme-color" content="#faf6ef">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Work+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  /* Layout concept: single-screen app shell — scrollable content area over a
+     fixed bottom tab bar, like a small native iOS app, so it reads as an app
+     once added to the home screen rather than a web page. */
+  :root{
+    --bg:#faf6ef; --surface:#ffffff; --surface-2:#f1ebe0;
+    --text:#2a2420; --text-dim:#7a6d5e; --border:#e6ddcc;
+    --rose:#a3123f; --rose-ink:#ffffff;
+    --forest:#1f5c3f; --forest-ink:#ffffff;
+    --gold:#c08a1e;
+    --shadow: 0 1px 2px rgba(42,36,32,.06), 0 8px 24px -8px rgba(42,36,32,.12);
+    --font-display:'Fraunces',Georgia,'Times New Roman',serif;
+    --font-body:'Work Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    --font-mono:'JetBrains Mono','SF Mono',Menlo,Consolas,monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#19140f; --surface:#241d16; --surface-2:#2c241a;
+      --text:#f2e9db; --text-dim:#b3a28a; --border:#3a2f22;
+      --rose:#e8718e; --rose-ink:#19140f;
+      --forest:#5fb98a; --forest-ink:#19140f;
+      --gold:#e3b24a;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px -8px rgba(0,0,0,.5);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#19140f; --surface:#241d16; --surface-2:#2c241a;
+    --text:#f2e9db; --text-dim:#b3a28a; --border:#3a2f22;
+    --rose:#e8718e; --rose-ink:#19140f;
+    --forest:#5fb98a; --forest-ink:#19140f;
+    --gold:#e3b24a;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px -8px rgba(0,0,0,.5);
+    color-scheme: dark;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;margin:0;}
+  body{
+    background:var(--bg); color:var(--text); font-family:var(--font-body);
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  .app{
+    flex:1; display:flex; flex-direction:column; min-height:0;
+    max-width:560px; width:100%; margin:0 auto; position:relative;
+  }
+  .topbar{
+    position:sticky; top:env(safe-area-inset-top,0px); z-index:10;
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    padding:14px max(16px,env(safe-area-inset-left,0px)) 12px max(16px,env(safe-area-inset-right,0px));
+    background:var(--bg); border-bottom:1px solid var(--border);
+  }
+  body::before{
+    content:""; position:fixed; inset:0 0 auto; height:env(safe-area-inset-top,0px);
+    z-index:10; background:var(--bg);
+  }
+  .brand{display:flex; align-items:baseline; gap:8px;}
+  .brand h1{
+    font-family:var(--font-display); font-weight:700; font-size:1.25rem; margin:0;
+    letter-spacing:-.01em;
+  }
+  .brand .tag{font-family:var(--font-mono); font-size:.68rem; color:var(--text-dim); letter-spacing:.02em;}
+  .streak{
+    display:flex; align-items:center; gap:6px; font-family:var(--font-mono);
+    font-size:.78rem; color:var(--gold); font-weight:700; white-space:nowrap;
+  }
+  .streak svg{width:15px;height:15px;}
+  main{
+    flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch;
+    padding:20px max(16px,env(safe-area-inset-left,0px)) 28px max(16px,env(safe-area-inset-right,0px));
+  }
+  .view{display:none;}
+  .view.active{display:block; animation:fade .25s ease;}
+  @keyframes fade{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;}}
+  @media (prefers-reduced-motion: reduce){ .view.active{animation:none;} }
+
+  h2.section-title{
+    font-family:var(--font-display); font-size:1.4rem; font-weight:600; margin:0 0 4px;
+  }
+  p.section-sub{color:var(--text-dim); margin:0 0 20px; font-size:.92rem; line-height:1.5;}
+
+  /* ---- Home ---- */
+  .hero-card{
+    background:linear-gradient(155deg,var(--rose),#7c0e30);
+    color:var(--rose-ink); border-radius:18px; padding:22px 20px; box-shadow:var(--shadow);
+    margin-bottom:18px;
+  }
+  .hero-card .eyebrow{font-family:var(--font-mono); font-size:.72rem; opacity:.85; letter-spacing:.04em; text-transform:uppercase;}
+  .hero-card h2{font-family:var(--font-display); font-size:1.5rem; margin:6px 0 2px; font-weight:600;}
+  .hero-card .sub{opacity:.9; font-size:.9rem; margin:0 0 16px;}
+  .hero-btn{
+    display:inline-flex; align-items:center; gap:8px; background:rgba(255,255,255,.18);
+    border:1px solid rgba(255,255,255,.4); color:inherit; font:inherit; font-weight:600;
+    font-size:.88rem; padding:10px 16px; border-radius:999px; cursor:pointer;
+  }
+  .hero-btn:active{background:rgba(255,255,255,.3);}
+
+  .stat-row{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:20px;}
+  .stat-tile{
+    background:var(--surface); border:1px solid var(--border); border-radius:14px;
+    padding:14px 10px; text-align:center;
+  }
+  .stat-tile .n{font-family:var(--font-display); font-size:1.5rem; font-weight:700; font-variant-numeric:tabular-nums;}
+  .stat-tile .l{font-size:.68rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:.03em; margin-top:2px;}
+
+  .wotd{
+    background:var(--surface-2); border:1px solid var(--border); border-radius:14px;
+    padding:16px; margin-bottom:20px;
+  }
+  .wotd .eyebrow{font-family:var(--font-mono); font-size:.68rem; color:var(--forest); font-weight:700; text-transform:uppercase; letter-spacing:.04em;}
+  .wotd .term{font-family:var(--font-mono); font-size:1.4rem; font-weight:700; margin:6px 0 2px;}
+  .wotd .meaning{color:var(--text-dim); font-size:.92rem;}
+
+  .cat-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:10px;}
+  .cat-card{
+    background:var(--surface); border:1px solid var(--border); border-radius:14px;
+    padding:14px; text-align:left; font:inherit; color:var(--text); cursor:pointer;
+    display:flex; flex-direction:column; gap:8px; min-width:0;
+  }
+  .cat-card:active{background:var(--surface-2);}
+  .cat-card .name{font-weight:600; font-size:.92rem; line-height:1.25;}
+  .cat-card .meta{font-family:var(--font-mono); font-size:.68rem; color:var(--text-dim);}
+  .bar{height:5px; border-radius:3px; background:var(--border); overflow:hidden;}
+  .bar>i{display:block; height:100%; background:var(--forest); border-radius:3px;}
+
+  /* ---- Flashcards ---- */
+  .flash-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;}
+  .back-link{
+    display:inline-flex; align-items:center; gap:6px; font:inherit; font-weight:600;
+    font-size:.85rem; color:var(--text-dim); background:none; border:none; cursor:pointer; padding:4px 0;
+  }
+  .progress-pill{font-family:var(--font-mono); font-size:.72rem; color:var(--text-dim);}
+  .card-stage{perspective:1200px; margin-bottom:18px;}
+  .flashcard{
+    position:relative; height:220px; border-radius:20px; cursor:pointer;
+    transform-style:preserve-3d; transition:transform .45s cubic-bezier(.2,.8,.2,1);
+  }
+  .flashcard.flipped{transform:rotateY(180deg);}
+  .face{
+    position:absolute; inset:0; border-radius:20px; backface-visibility:hidden;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding:20px; border:1px solid var(--border); box-shadow:var(--shadow);
+  }
+  .face.front{background:var(--surface);}
+  .face.back{background:var(--forest); color:var(--forest-ink); transform:rotateY(180deg);}
+  .face .cue{font-family:var(--font-mono); font-size:.68rem; letter-spacing:.04em; text-transform:uppercase; opacity:.6; margin-bottom:10px;}
+  .face .word{font-family:var(--font-mono); font-size:1.7rem; font-weight:700; line-height:1.2;}
+  .face.back .word{font-family:var(--font-body); font-size:1.4rem; font-weight:600;}
+  .face .note{margin-top:10px; font-size:.82rem; opacity:.85; max-width:38ch;}
+  .tap-hint{text-align:center; font-size:.76rem; color:var(--text-dim); margin:-6px 0 18px;}
+  .flash-actions{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .fbtn{
+    font:inherit; font-weight:700; font-size:.88rem; padding:14px; border-radius:14px; border:1px solid var(--border);
+    cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;
+  }
+  .fbtn.learning{background:var(--surface); color:var(--text);}
+  .fbtn.learning:active{background:var(--surface-2);}
+  .fbtn.got-it{background:var(--forest); color:var(--forest-ink); border-color:var(--forest);}
+  .fbtn.got-it:active{opacity:.85;}
+
+  /* ---- Quiz ---- */
+  .quiz-setup{display:flex; flex-direction:column; gap:10px;}
+  .pick-btn{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    background:var(--surface); border:1px solid var(--border); border-radius:14px;
+    padding:14px 16px; font:inherit; font-weight:600; font-size:.92rem; color:var(--text); cursor:pointer;
+  }
+  .pick-btn.selected{border-color:var(--rose); background:var(--surface-2);}
+  .pick-btn .count{font-family:var(--font-mono); font-size:.72rem; color:var(--text-dim); font-weight:500;}
+  .dir-toggle{display:flex; border:1px solid var(--border); border-radius:12px; overflow:hidden; margin:16px 0;}
+  .dir-toggle button{
+    flex:1; font:inherit; font-weight:600; font-size:.82rem; padding:11px; border:none; background:var(--surface);
+    color:var(--text-dim); cursor:pointer;
+  }
+  .dir-toggle button.active{background:var(--rose); color:var(--rose-ink);}
+  .start-quiz{
+    width:100%; margin-top:10px; background:var(--rose); color:var(--rose-ink); border:none;
+    font:inherit; font-weight:700; font-size:.95rem; padding:15px; border-radius:14px; cursor:pointer;
+  }
+  .start-quiz:disabled{opacity:.4;}
+  .quiz-progress{display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; font-family:var(--font-mono); font-size:.76rem; color:var(--text-dim);}
+  .quiz-q{
+    background:var(--surface); border:1px solid var(--border); border-radius:18px; padding:26px 20px;
+    text-align:center; margin-bottom:18px;
+  }
+  .quiz-q .cue{font-family:var(--font-mono); font-size:.68rem; text-transform:uppercase; letter-spacing:.04em; color:var(--text-dim); margin-bottom:8px;}
+  .quiz-q .prompt{font-family:var(--font-mono); font-size:1.5rem; font-weight:700;}
+  .quiz-q .prompt.en{font-family:var(--font-body);}
+  .options{display:flex; flex-direction:column; gap:10px;}
+  .option{
+    text-align:left; font:inherit; font-size:.92rem; background:var(--surface); border:1px solid var(--border);
+    border-radius:14px; padding:13px 16px; cursor:pointer; color:var(--text);
+  }
+  .option.correct{border-color:var(--forest); background:color-mix(in srgb, var(--forest) 16%, var(--surface));}
+  .option.wrong{border-color:var(--rose); background:color-mix(in srgb, var(--rose) 14%, var(--surface));}
+  .option[disabled]{cursor:default;}
+  .quiz-result{text-align:center; padding:20px 0;}
+  .quiz-result .big{font-family:var(--font-display); font-size:2.6rem; font-weight:700;}
+  .quiz-result .sub{color:var(--text-dim); margin:6px 0 22px;}
+
+  /* ---- Progress tab ---- */
+  .overall{
+    background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:18px;
+    margin-bottom:20px;
+  }
+  .overall .row{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:10px;}
+  .overall .row .n{font-family:var(--font-mono); font-weight:700;}
+  .cat-row{
+    display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid var(--border);
+  }
+  .cat-row:last-child{border-bottom:none;}
+  .cat-row .info{flex:1; min-width:0;}
+  .cat-row .name{font-weight:600; font-size:.88rem; margin-bottom:6px;}
+  .cat-row .count{font-family:var(--font-mono); font-size:.76rem; color:var(--text-dim); white-space:nowrap;}
+
+  /* ---- Bottom nav ---- */
+  nav.tabbar{
+    position:sticky; bottom:0; z-index:10; display:flex;
+    background:var(--surface); border-top:1px solid var(--border);
+    padding:8px max(16px,env(safe-area-inset-left,0px)) max(8px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-right,0px));
+  }
+  .tab{
+    flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px 0;
+    background:none; border:none; font:inherit; color:var(--text-dim); cursor:pointer;
+  }
+  .tab svg{width:22px; height:22px;}
+  .tab span{font-size:.66rem; font-weight:600;}
+  .tab.active{color:var(--rose);}
+  .empty{text-align:center; padding:40px 10px; color:var(--text-dim); font-size:.9rem;}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="brand">
+      <h1>Uchi Balgarski</h1>
+      <span class="tag">learn bulgarian</span>
+    </div>
+    <div class="streak" id="streakBadge">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2c1 4-4 5-4 9a4 4 0 008 0c0-1.5-.5-2.5-1-3 .3 2-1 3-1.5 2-.5-1 0-2-1.5-3.5C11.3 7.8 11 5 12 2z"/></svg>
+      <span id="streakNum">0</span>
+    </div>
+  </div>
+
+  <main id="main">
+    <!-- HOME -->
+    <section class="view" id="view-home">
+      <div class="hero-card">
+        <div class="eyebrow" id="greetingTime">Dobar den</div>
+        <h2 id="greetingMain">Let's learn some Bulgarian</h2>
+        <p class="sub" id="greetingSub">No Cyrillic required — everything's written the way it sounds.</p>
+        <button class="hero-btn" id="continueBtn" type="button">
+          Continue learning
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 6l6 6-6 6"/></svg>
+        </button>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat-tile"><div class="n" id="statMastered">0</div><div class="l">Mastered</div></div>
+        <div class="stat-tile"><div class="n" id="statLearning">0</div><div class="l">Learning</div></div>
+        <div class="stat-tile"><div class="n" id="statTotal">0</div><div class="l">Total words</div></div>
+      </div>
+
+      <div class="wotd">
+        <div class="eyebrow">Word of the day</div>
+        <div class="term" id="wotdTerm">—</div>
+        <div class="meaning" id="wotdMeaning">—</div>
+      </div>
+
+      <h2 class="section-title">Categories</h2>
+      <p class="section-sub">Pick a set of words to study as flashcards.</p>
+      <div class="cat-grid" id="homeCatGrid"></div>
+    </section>
+
+    <!-- FLASHCARDS -->
+    <section class="view" id="view-learn">
+      <div id="learnPicker">
+        <h2 class="section-title">Flashcards</h2>
+        <p class="section-sub">Choose a category to study.</p>
+        <div class="cat-grid" id="learnCatGrid"></div>
+      </div>
+      <div id="learnDeck" style="display:none;">
+        <div class="flash-head">
+          <button class="back-link" type="button" id="learnBack">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 6l-6 6 6 6"/></svg>
+            Categories
+          </button>
+          <span class="progress-pill" id="learnProgress"></span>
+        </div>
+        <div class="card-stage">
+          <div class="flashcard" id="flashcard">
+            <div class="face front">
+              <div class="cue">Bulgarian</div>
+              <div class="word" id="flashFront">—</div>
+            </div>
+            <div class="face back">
+              <div class="cue">English</div>
+              <div class="word" id="flashBackWord">—</div>
+              <div class="note" id="flashNote"></div>
+            </div>
+          </div>
+        </div>
+        <p class="tap-hint">Tap the card to flip it</p>
+        <div class="flash-actions">
+          <button class="fbtn learning" type="button" id="btnLearning">Still learning</button>
+          <button class="fbtn got-it" type="button" id="btnGotIt">Got it</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- QUIZ -->
+    <section class="view" id="view-quiz">
+      <div id="quizSetup">
+        <h2 class="section-title">Quiz</h2>
+        <p class="section-sub">Test yourself with multiple choice.</p>
+        <div class="quiz-setup" id="quizCatList"></div>
+        <div class="dir-toggle" id="dirToggle">
+          <button type="button" data-dir="bg-en" class="active">Bulgarian → English</button>
+          <button type="button" data-dir="en-bg">English → Bulgarian</button>
+        </div>
+        <button class="start-quiz" type="button" id="startQuizBtn">Start quiz</button>
+      </div>
+      <div id="quizRun" style="display:none;">
+        <div class="quiz-progress">
+          <span id="quizStep">Question 1/10</span>
+          <span id="quizScore">Score 0</span>
+        </div>
+        <div class="quiz-q">
+          <div class="cue" id="quizCue">Bulgarian</div>
+          <div class="prompt" id="quizPrompt">—</div>
+        </div>
+        <div class="options" id="quizOptions"></div>
+      </div>
+      <div id="quizDone" style="display:none;">
+        <div class="quiz-result">
+          <div class="big" id="quizFinalScore">0/0</div>
+          <div class="sub" id="quizFinalNote">Nice work.</div>
+          <button class="start-quiz" type="button" id="quizRetryBtn">Try again</button>
+          <button class="back-link" type="button" id="quizBackBtn" style="margin-top:14px;">Back to setup</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- PROGRESS -->
+    <section class="view" id="view-progress">
+      <h2 class="section-title">Progress</h2>
+      <p class="section-sub">Mastery is tracked per word, right on this device.</p>
+      <div class="overall">
+        <div class="row"><span>Words mastered</span><span class="n" id="progMastered">0 / 0</span></div>
+        <div class="bar"><i id="progBarOverall" style="width:0%"></i></div>
+      </div>
+      <div id="progList"></div>
+    </section>
+  </main>
+
+  <nav class="tabbar">
+    <button class="tab active" data-tab="home" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-7 9 7"/><path d="M5 10v9a1 1 0 001 1h3v-6h6v6h3a1 1 0 001-1v-9"/></svg>
+      <span>Home</span>
+    </button>
+    <button class="tab" data-tab="learn" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="13" height="16" rx="2" transform="rotate(-6 10 13)"/><rect x="7" y="4" width="13" height="16" rx="2" fill="var(--bg)"/></svg>
+      <span>Learn</span>
+    </button>
+    <button class="tab" data-tab="quiz" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 015 0c0 1.5-1.5 2-2.5 3"/><circle cx="12" cy="16.5" r=".5" fill="currentColor"/></svg>
+      <span>Quiz</span>
+    </button>
+    <button class="tab" data-tab="progress" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10M11 20V4M18 20v-7"/></svg>
+      <span>Progress</span>
+    </button>
+  </nav>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- Data ---------------- */
+  var CATS = [
+    {id:"greet", name:"Greetings & Basics", items:[
+      ["Zdravey","Hello","informal, to one friend"],
+      ["Zdraveyte","Hello","formal, or to more than one person"],
+      ["Dobro utro","Good morning",""],
+      ["Dobar den","Good day","used through the afternoon"],
+      ["Dobar vecher","Good evening",""],
+      ["Leka nosht","Good night",""],
+      ["Dovizhdane","Goodbye","neutral, polite"],
+      ["Chao","Bye","casual"],
+      ["Kak si?","How are you?","informal"],
+      ["Kak ste?","How are you?","formal"],
+      ["Dobre, blagodarya","Fine, thank you",""],
+      ["Kak se kazvash?","What's your name?","informal"],
+      ["Kazvam se…","My name is…",""],
+      ["Priyatno mi e","Nice to meet you",""],
+      ["Da","Yes",""],
+      ["Ne","No",""]
+    ]},
+    {id:"polite", name:"Polite Phrases", items:[
+      ["Molya","Please",""],
+      ["Blagodarya","Thank you",""],
+      ["Blagodarya mnogo","Thank you very much",""],
+      ["Nyama zashto","You're welcome","literally “no reason to”"],
+      ["Izvinete","Excuse me / Sorry",""],
+      ["Prosti mi","Forgive me","more personal than izvinete"],
+      ["Za udovolstvie","My pleasure",""],
+      ["Ne razbiram","I don't understand",""],
+      ["Razbiram","I understand",""],
+      ["Govorite li angliyski?","Do you speak English?",""],
+      ["Ne govorya balgarski mnogo dobre","I don't speak Bulgarian very well",""],
+      ["Povtorete, molya","Repeat, please",""],
+      ["Po-bavno, molya","Slower, please",""]
+    ]},
+    {id:"numbers", name:"Numbers 0–20", items:[
+      ["nula","0",""],["edno","1",""],["dve","2",""],["tri","3",""],["chetiri","4",""],
+      ["pet","5",""],["shest","6",""],["sedem","7",""],["osem","8",""],["devet","9",""],
+      ["deset","10",""],["edinadeset","11",""],["dvanadeset","12",""],["trinadeset","13",""],
+      ["chetirinadeset","14",""],["petnadeset","15",""],["shestnadeset","16",""],
+      ["sedemnadeset","17",""],["osemnadeset","18",""],["devetnadeset","19",""],["dvadeset","20",""]
+    ]},
+    {id:"tens", name:"Bigger Numbers", items:[
+      ["trideset","30",""],["chetirideset","40",""],["petdeset","50",""],["shestdeset","60",""],
+      ["sedemdeset","70",""],["osemdeset","80",""],["devetdeset","90",""],["sto","100",""],
+      ["hilyada","1,000",""],["kolko struva?","how much does it cost?",""]
+    ]},
+    {id:"questions", name:"Question Words", items:[
+      ["Koy","Who",""],["Kakvo","What",""],["Kade","Where",""],["Koga","When",""],
+      ["Zashto","Why",""],["Kak","How",""],["Kolko","How much / how many",""],
+      ["Koy e tova?","Who is this?",""],["Kakvo e tova?","What is this?",""]
+    ]},
+    {id:"family", name:"Family", items:[
+      ["Semeystvo","Family",""],["Mayka","Mother",""],["Bashta","Father",""],
+      ["Sin","Son","same word also means the colour blue"],["Dashterya","Daughter",""],
+      ["Brat","Brother",""],["Sestra","Sister",""],["Baba","Grandmother",""],
+      ["Dyado","Grandfather",""],["Saprug","Husband",""],["Sapruga","Wife",""],
+      ["Priyatel","Friend","male"],["Priyatelka","Friend","female"]
+    ]},
+    {id:"food", name:"Food & Drink", items:[
+      ["Hrana","Food",""],["Voda","Water",""],["Vino","Wine",""],["Bira","Beer",""],
+      ["Kafe","Coffee",""],["Chay","Tea",""],["Hlyab","Bread",""],
+      ["Sirene","White cheese","Bulgaria's everyday cheese, like feta"],
+      ["Salata","Salad",""],["Supa","Soup",""],["Meso","Meat",""],["Ryba","Fish",""],
+      ["Plod","Fruit",""],["Zelenchuk","Vegetable",""],["Smetkata, molya","The bill, please",""],
+      ["Nazdrave!","Cheers!",""],["Gladen sum","I'm hungry","a man speaking"],
+      ["Zhaden sum","I'm thirsty","a man speaking"]
+    ]},
+    {id:"travel", name:"Travel & Directions", items:[
+      ["Kade e…?","Where is…?",""],["Letishte","Airport",""],["Gara","Train station",""],
+      ["Hotel","Hotel",""],["Ulitsa","Street",""],["Napravo","Straight ahead",""],
+      ["Nalyavo","Left",""],["Nadyasno","Right",""],["Blizo","Near",""],["Daleko","Far",""],
+      ["Bilet","Ticket",""],["Taksi","Taxi",""],["Avtobus","Bus",""]
+    ]},
+    {id:"time", name:"Time & Days", items:[
+      ["Dnes","Today",""],["Utre","Tomorrow",""],["Vchera","Yesterday",""],["Sega","Now",""],
+      ["Chas","Hour / o'clock",""],["Ponedelnik","Monday",""],["Vtornik","Tuesday",""],
+      ["Sryada","Wednesday",""],["Chetvartak","Thursday",""],["Petak","Friday",""],
+      ["Sabota","Saturday",""],["Nedelya","Sunday",""]
+    ]},
+    {id:"verbs", name:"Everyday Verbs (I…)", items:[
+      ["Sum","I am",""],["Imam","I have",""],["Iskam","I want",""],["Otivam","I go",""],
+      ["Yadem","I eat",""],["Pia","I drink",""],["Govorya","I speak",""],
+      ["Obicham","I love / I like",""],["Vizhdam","I see",""],["Znaya","I know",""],
+      ["Zhiveya","I live",""]
+    ]},
+    {id:"colors", name:"Colours", items:[
+      ["Cherven","Red",""],["Sin","Blue","same word also means “son”"],["Zelen","Green",""],
+      ["Zhalt","Yellow",""],["Cherno","Black",""],["Byalo","White",""],
+      ["Rozovo","Pink",""],["Kafyavo","Brown",""]
+    ]}
+  ];
+
+  var ALL = []; // flat list with catId + idx for quiz "mixed" mode
+  CATS.forEach(function(c){ c.items.forEach(function(it, i){ ALL.push({catId:c.id, idx:i, bg:it[0], en:it[1], note:it[2]}); }); });
+
+  /* ---------------- Storage ---------------- */
+  function read(key, fallback){
+    try{ var v = localStorage.getItem(key); return v===null ? fallback : JSON.parse(v); }
+    catch(e){ return fallback; }
+  }
+  function write(key, val){
+    try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){}
+  }
+  var MASTERY_KEY = "ub_mastery_v1";       // { "catId:idx": 0-3 }
+  var VISITS_KEY  = "ub_visits_v1";        // ["2024-01-01", ...]
+  var LAST_CAT_KEY= "ub_last_cat_v1";
+
+  var mastery = read(MASTERY_KEY, {});
+  function masteryOf(catId, idx){ return mastery[catId+":"+idx] || 0; }
+  function setMastery(catId, idx, level){
+    level = Math.max(0, Math.min(3, level));
+    mastery[catId+":"+idx] = level;
+    write(MASTERY_KEY, mastery);
+  }
+  function catStats(cat){
+    var mastered=0, learning=0;
+    cat.items.forEach(function(_, i){
+      var lv = masteryOf(cat.id, i);
+      if(lv>=3) mastered++; else if(lv>0) learning++;
+    });
+    return {mastered:mastered, learning:learning, total:cat.items.length};
+  }
+
+  function todayStr(){ return new Date().toISOString().slice(0,10); }
+  function recordVisitAndStreak(){
+    var visits = read(VISITS_KEY, []);
+    var today = todayStr();
+    if(visits.indexOf(today)===-1){ visits.push(today); write(VISITS_KEY, visits); }
+    var streak = 0, d = new Date();
+    for(;;){
+      var key = d.toISOString().slice(0,10);
+      if(visits.indexOf(key)!==-1){ streak++; d.setDate(d.getDate()-1); }
+      else break;
+    }
+    return streak;
+  }
+
+  /* ---------------- Nav ---------------- */
+  var state = { tab:"home", learnCat:null, flashIdx:0, flipped:false,
+                quiz:null };
+
+  function showTab(tab){
+    state.tab = tab;
+    document.querySelectorAll(".view").forEach(function(v){ v.classList.remove("active"); });
+    document.getElementById("view-"+tab).classList.add("active");
+    document.querySelectorAll(".tab").forEach(function(b){ b.classList.toggle("active", b.dataset.tab===tab); });
+    if(tab==="home") renderHome();
+    if(tab==="progress") renderProgress();
+  }
+  document.querySelectorAll(".tab").forEach(function(btn){
+    btn.addEventListener("click", function(){ showTab(btn.dataset.tab); });
+  });
+
+  /* ---------------- Home ---------------- */
+  function greetingForNow(){
+    var h = new Date().getHours();
+    if(h<11) return ["Dobro utro","Good morning"];
+    if(h<18) return ["Dobar den","Good afternoon"];
+    return ["Dobar vecher","Good evening"];
+  }
+  function renderHome(){
+    var g = greetingForNow();
+    document.getElementById("greetingTime").textContent = g[0];
+    document.getElementById("greetingSub").textContent = g[1]+" — pick a category below or jump back in.";
+
+    var totalMastered=0, totalLearning=0, totalWords=ALL.length;
+    CATS.forEach(function(c){ var s=catStats(c); totalMastered+=s.mastered; totalLearning+=s.learning; });
+    document.getElementById("statMastered").textContent = totalMastered;
+    document.getElementById("statLearning").textContent = totalLearning;
+    document.getElementById("statTotal").textContent = totalWords;
+
+    var dayIdx = Math.floor(Date.now()/86400000) % ALL.length;
+    var w = ALL[dayIdx];
+    document.getElementById("wotdTerm").textContent = w.bg;
+    document.getElementById("wotdMeaning").textContent = w.en + (w.note? " · "+w.note : "");
+
+    var grid = document.getElementById("homeCatGrid");
+    grid.innerHTML = "";
+    CATS.forEach(function(c){
+      grid.appendChild(catCard(c, function(){ openLearn(c.id); showTab("learn"); }));
+    });
+
+    var streak = recordVisitAndStreak();
+    document.getElementById("streakNum").textContent = streak;
+  }
+  function catCard(cat, onClick){
+    var s = catStats(cat);
+    var el = document.createElement("button");
+    el.type = "button"; el.className = "cat-card";
+    var pct = s.total ? Math.round(s.mastered/s.total*100) : 0;
+    el.innerHTML =
+      '<div class="name">'+cat.name+'</div>'+
+      '<div class="bar"><i style="width:'+pct+'%"></i></div>'+
+      '<div class="meta">'+s.mastered+' / '+s.total+' mastered</div>';
+    el.addEventListener("click", onClick);
+    return el;
+  }
+  document.getElementById("continueBtn").addEventListener("click", function(){
+    var last = read(LAST_CAT_KEY, CATS[0].id);
+    openLearn(last); showTab("learn");
+  });
+
+  /* ---------------- Flashcards ---------------- */
+  function renderLearnPicker(){
+    var grid = document.getElementById("learnCatGrid");
+    grid.innerHTML = "";
+    CATS.forEach(function(c){
+      grid.appendChild(catCard(c, function(){ openLearn(c.id); }));
+    });
+  }
+  function openLearn(catId){
+    state.learnCat = catId; state.flashIdx = 0; state.flipped = false;
+    write(LAST_CAT_KEY, catId);
+    document.getElementById("learnPicker").style.display = "none";
+    document.getElementById("learnDeck").style.display = "block";
+    renderFlashcard();
+  }
+  document.getElementById("learnBack").addEventListener("click", function(){
+    document.getElementById("learnPicker").style.display = "block";
+    document.getElementById("learnDeck").style.display = "none";
+    renderLearnPicker();
+  });
+  function currentCat(){ return CATS.filter(function(c){ return c.id===state.learnCat; })[0]; }
+  function renderFlashcard(){
+    var cat = currentCat(); if(!cat) return;
+    var item = cat.items[state.flashIdx];
+    document.getElementById("flashFront").textContent = item[0];
+    document.getElementById("flashBackWord").textContent = item[1];
+    document.getElementById("flashNote").textContent = item[2] || "";
+    document.getElementById("flashcard").classList.toggle("flipped", state.flipped);
+    document.getElementById("learnProgress").textContent = (state.flashIdx+1)+" / "+cat.items.length+" · "+cat.name;
+  }
+  document.getElementById("flashcard").addEventListener("click", function(){
+    state.flipped = !state.flipped;
+    this.classList.toggle("flipped", state.flipped);
+  });
+  function advanceCard(){
+    var cat = currentCat();
+    state.flashIdx = (state.flashIdx+1) % cat.items.length;
+    state.flipped = false;
+    renderFlashcard();
+  }
+  document.getElementById("btnGotIt").addEventListener("click", function(){
+    var cat = currentCat();
+    setMastery(cat.id, state.flashIdx, masteryOf(cat.id, state.flashIdx)+1);
+    advanceCard();
+  });
+  document.getElementById("btnLearning").addEventListener("click", function(){
+    var cat = currentCat();
+    setMastery(cat.id, state.flashIdx, Math.max(0, masteryOf(cat.id, state.flashIdx)-1));
+    advanceCard();
+  });
+
+  /* ---------------- Quiz ---------------- */
+  var quizSelectedCat = "mixed";
+  var quizDir = "bg-en";
+  function renderQuizSetup(){
+    var list = document.getElementById("quizCatList");
+    list.innerHTML = "";
+    var mixedBtn = pickBtn("mixed", "Mixed review", ALL.length);
+    list.appendChild(mixedBtn);
+    CATS.forEach(function(c){ list.appendChild(pickBtn(c.id, c.name, c.items.length)); });
+    refreshPickSelection();
+  }
+  function pickBtn(id, label, count){
+    var b = document.createElement("button");
+    b.type="button"; b.className="pick-btn"; b.dataset.cat = id;
+    b.innerHTML = "<span>"+label+"</span><span class='count'>"+count+" words</span>";
+    b.addEventListener("click", function(){ quizSelectedCat = id; refreshPickSelection(); });
+    return b;
+  }
+  function refreshPickSelection(){
+    document.querySelectorAll(".pick-btn").forEach(function(b){
+      b.classList.toggle("selected", b.dataset.cat===quizSelectedCat);
+    });
+  }
+  document.getElementById("dirToggle").addEventListener("click", function(e){
+    var b = e.target.closest("button[data-dir]"); if(!b) return;
+    quizDir = b.dataset.dir;
+    this.querySelectorAll("button").forEach(function(x){ x.classList.toggle("active", x===b); });
+  });
+  function shuffle(arr){
+    arr = arr.slice();
+    for(var i=arr.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=arr[i]; arr[i]=arr[j]; arr[j]=t; }
+    return arr;
+  }
+  function poolFor(catId){
+    if(catId==="mixed") return ALL;
+    return ALL.filter(function(w){ return w.catId===catId; });
+  }
+  document.getElementById("startQuizBtn").addEventListener("click", function(){
+    var pool = poolFor(quizSelectedCat);
+    if(pool.length < 2) return;
+    var n = Math.min(10, pool.length);
+    var questions = shuffle(pool).slice(0, n).map(function(w){
+      var distractorPool = ALL.filter(function(x){ return x!==w; });
+      var distractors = shuffle(distractorPool).slice(0,3);
+      var options = shuffle([w].concat(distractors));
+      return { answer:w, options:options };
+    });
+    state.quiz = { dir:quizDir, questions:questions, i:0, score:0, answered:false };
+    document.getElementById("quizSetup").style.display = "none";
+    document.getElementById("quizRun").style.display = "block";
+    document.getElementById("quizDone").style.display = "none";
+    renderQuizQuestion();
+  });
+  function renderQuizQuestion(){
+    var q = state.quiz, item = q.questions[q.i];
+    document.getElementById("quizStep").textContent = "Question "+(q.i+1)+"/"+q.questions.length;
+    document.getElementById("quizScore").textContent = "Score "+q.score;
+    var promptEl = document.getElementById("quizPrompt");
+    var cueEl = document.getElementById("quizCue");
+    if(q.dir==="bg-en"){
+      cueEl.textContent = "Bulgarian"; promptEl.textContent = item.answer.bg;
+      promptEl.classList.remove("en"); promptEl.style.fontFamily = "var(--font-mono)";
+    }else{
+      cueEl.textContent = "English"; promptEl.textContent = item.answer.en;
+      promptEl.classList.add("en"); promptEl.style.fontFamily = "var(--font-body)";
+    }
+    var opts = document.getElementById("quizOptions");
+    opts.innerHTML = "";
+    item.options.forEach(function(opt){
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "option";
+      b.textContent = q.dir==="bg-en" ? opt.en : opt.bg;
+      b.addEventListener("click", function(){ answerQuiz(opt, item, b); });
+      opts.appendChild(b);
+    });
+    q.answered = false;
+  }
+  function answerQuiz(chosen, item, btnEl){
+    var q = state.quiz; if(q.answered) return;
+    q.answered = true;
+    var correct = chosen===item.answer;
+    if(correct) q.score++;
+    document.querySelectorAll(".option").forEach(function(b){ b.disabled = true; });
+    document.querySelectorAll(".option").forEach(function(b){
+      var label = b.textContent;
+      var correctLabel = q.dir==="bg-en" ? item.answer.en : item.answer.bg;
+      if(label===correctLabel) b.classList.add("correct");
+    });
+    if(!correct) btnEl.classList.add("wrong");
+    setTimeout(function(){
+      q.i++;
+      if(q.i >= q.questions.length){ finishQuiz(); }
+      else{ renderQuizQuestion(); }
+    }, 650);
+  }
+  function finishQuiz(){
+    var q = state.quiz;
+    document.getElementById("quizRun").style.display = "none";
+    document.getElementById("quizDone").style.display = "block";
+    document.getElementById("quizFinalScore").textContent = q.score+"/"+q.questions.length;
+    var pct = Math.round(q.score/q.questions.length*100);
+    var note = pct===100 ? "Perfect score." : pct>=70 ? "Solid work." : pct>=40 ? "Getting there." : "Keep practising — try flashcards for this set.";
+    document.getElementById("quizFinalNote").textContent = note;
+    state.quiz = null;
+  }
+  document.getElementById("quizRetryBtn").addEventListener("click", function(){
+    document.getElementById("quizDone").style.display = "none";
+    document.getElementById("quizSetup").style.display = "block";
+  });
+  document.getElementById("quizBackBtn").addEventListener("click", function(){
+    document.getElementById("quizRun").style.display = "none";
+    document.getElementById("quizSetup").style.display = "block";
+    state.quiz = null;
+  });
+
+  /* ---------------- Progress ---------------- */
+  function renderProgress(){
+    var totalMastered=0, totalWords=ALL.length;
+    CATS.forEach(function(c){ totalMastered += catStats(c).mastered; });
+    document.getElementById("progMastered").textContent = totalMastered+" / "+totalWords;
+    document.getElementById("progBarOverall").style.width = (totalWords? Math.round(totalMastered/totalWords*100):0)+"%";
+
+    var list = document.getElementById("progList");
+    list.innerHTML = "";
+    CATS.forEach(function(c){
+      var s = catStats(c);
+      var pct = s.total ? Math.round(s.mastered/s.total*100) : 0;
+      var row = document.createElement("div");
+      row.className = "cat-row";
+      row.innerHTML =
+        '<div class="info"><div class="name">'+c.name+'</div><div class="bar"><i style="width:'+pct+'%"></i></div></div>'+
+        '<div class="count">'+s.mastered+'/'+s.total+'</div>';
+      list.appendChild(row);
+    });
+  }
+
+  renderLearnPicker();
+  renderQuizSetup();
+  showTab("home");
+})();
+
+if("serviceWorker" in navigator){
+  window.addEventListener("load", function(){
+    navigator.serviceWorker.register("sw.js").catch(function(){});
+  });
+}
+</script>
+</body>
+</html>
